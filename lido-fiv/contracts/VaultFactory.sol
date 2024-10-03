@@ -111,7 +111,7 @@ contract VaultFactory is ILidoVaultInitializer, Ownable {
   ) public virtual {
     // Deploy vault (Note: this does not run constructor)
     address vaultAddress = Clones.clone(vaultContract);
-
+    require(_fixedSideCapacity < 100_000 ether, "FTC");
     require(vaultAddress != address(0), "FTC");
 
     // Store vault info

@@ -47,7 +47,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   uint256 public appliedProtocolFee;
 
   /// @notice ETH amount that tracks the total Saffron protocol fee from variable withdrawal staking earnings while the vault is still ongoing
-  uint256 public totalProtocolFee;
+  uint256 public ongoingProtocolFeeInShares;
 
   /// @notice Address that collects the Saffron protocol fee
   address public protocolFeeReceiver;
@@ -123,6 +123,9 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   /// @notice Amount of ETH used to cover the returning of fixed user's initial principal
   uint256 public vaultEndedFixedDepositsFunds;
 
+    /// @notice Amount of earnings in ETH from Lido Staking after the vault has ended that was already withdrawn
+  uint256 public vaultEndedWithdrawnStakingEarnings;
+
   /// @notice Mapping from user addresses to the upfront premium a fixed depositor received from the variable side
   mapping(address => uint256) public userToFixedUpfrontPremium;
 
@@ -176,7 +179,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   mapping(address => uint256) public variableToWithdrawnStakingEarningsInShares;
 
   /// @notice Mapping from variable side user addresses to their total payed protocol fee amount right after their Lido withdrawal request is submitted
-  mapping(address => uint256) public variableToWithdrawnProtocolFee;
+  mapping(address => uint256) public variableToWithdrawnProtocolFeeInShares;
 
   /// @notice Mapping from variable side user addresses to their total withdrawn fees amount right after their Lido withdrawal request is claimed
   mapping(address => uint256) public variableToWithdrawnFees;
@@ -287,7 +290,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     require(params.protocolFeeReceiver != address(0), "NEI");
 
     require(params.fixedSideCapacity.mulDiv(minimumFixedDepositBps, 10_000) >= minimumDepositAmount, "IFC");
-
+    require(params.variableSideCapacity >= minimumDepositAmount, "IVC");
     // Initialize contract state variables
     id = params.vaultId;
     duration = params.duration;
@@ -521,16 +524,18 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
           uint256 fixedETHDeposits = fixedSidestETHOnStartCapacity;
 
         // staking earnings have accumulated on Lido
-        if (lidoStETHBalance > fixedETHDeposits + minStETHWithdrawalAmount()) {
+        if (lidoStETHBalance > fixedETHDeposits + MIN_STETH_WITHDRAWAL_AMOUNT) {
           uint256 currentStakes = stakingShares();
           (uint256 currentState, uint256 ethAmountOwed) = calculateVariableWithdrawState(
             (lidoStETHBalance.mulDiv(currentStakes + withdrawnStakingEarningsInStakes, currentStakes) - fixedETHDeposits),
             variableToWithdrawnStakingEarningsInShares[msg.sender].mulDiv(lidoStETHBalance, currentStakes)
           );
-          if (ethAmountOwed >= minStETHWithdrawalAmount()) {
+          ethAmountOwed = Math.min(ethAmountOwed, lidoStETHBalance - fixedETHDeposits);
+          if (ethAmountOwed >= MIN_STETH_WITHDRAWAL_AMOUNT) {
             // estimate protocol fee and update total - will actually be applied on withdraw finalization
             uint256 protocolFee = ethAmountOwed.mulDiv(protocolFeeBps, 10000);
-            totalProtocolFee += protocolFee;
+            uint256 protocolFeeInShares = lido.getSharesByPooledEth(protocolFee);
+            ongoingProtocolFeeInShares += protocolFeeInShares;
             uint256 stakesAmountOwed = lido.getSharesByPooledEth(ethAmountOwed);
 
             withdrawnStakingEarnings += ethAmountOwed - protocolFee;
@@ -538,7 +543,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
             variableToWithdrawnStakingEarnings[msg.sender] += ethAmountOwed - protocolFee;
             variableToWithdrawnStakingEarningsInShares[msg.sender] += stakesAmountOwed;
-            variableToWithdrawnProtocolFee[msg.sender] += protocolFee;
+            variableToWithdrawnProtocolFeeInShares[msg.sender] += protocolFeeInShares;
             variableToVaultOngoingWithdrawalRequestIds[msg.sender] = requestWithdrawViaETH(
               msg.sender,
               ethAmountOwed
@@ -570,6 +575,19 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
       // Vault ended
     } else {
       return vaultEndedWithdraw(side);
+    }
+  }
+
+  /// @notice Withdraw early Exit fee from the vault
+  function withdrawEarlyExitFee() external {
+    uint256 bearerBalance = variableBearerToken[msg.sender];
+    require(bearerBalance > 0, "NBT");
+    if (feeEarnings > 0) {
+      uint256 feeEarningsShare = calculateVariableFeeEarningsShare();
+      if (feeEarningsShare > 0) {
+        transferWithdrawnFunds(msg.sender, feeEarningsShare);
+        emit VariableFundsWithdrawn(feeEarningsShare, msg.sender, true, false);
+      }
     }
   }
 
@@ -653,7 +671,8 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   function withdrawAmountVariablePending() public {
     uint256 amount = variableToPendingWithdrawalAmount[msg.sender];
     variableToPendingWithdrawalAmount[msg.sender] = 0;
-    payable(msg.sender).transfer(amount);
+    (bool sent, ) = payable(msg.sender).call{value: amount}("");
+    require(sent, "ETF");
   }
 
   /// @notice Finalize the vault ended withdrawals
@@ -709,17 +728,18 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   function vaultEndedWithdraw(uint256 side) internal {
     if (vaultEndedWithdrawalRequestIds.length == 0 && !vaultEndedWithdrawalsFinalized) {
       emit VaultEnded(block.timestamp, msg.sender);
-      if (stakingBalance() < minStETHWithdrawalAmount()) {
+      uint256 stakingBalance = stakingBalance();
+      if (stakingBalance < MIN_STETH_WITHDRAWAL_AMOUNT) {
 
         claimOngoingFixedWithdrawals();
         vaultEndingStakesAmount = stakingShares();
-        vaultEndingETHBalance = stakingBalance();
+        vaultEndingETHBalance = stakingBalance;
         // not enough staking ETH to withdraw just override vault ended state and continue the withdraw
         vaultEndedWithdrawalsFinalized = true;
       } else {
         vaultEndingStakesAmount = stakingShares();
-        vaultEndingETHBalance = stakingBalance();
-        vaultEndedWithdrawalRequestIds = requestEntireBalanceWithdraw(msg.sender);
+        vaultEndingETHBalance = stakingBalance;
+        vaultEndedWithdrawalRequestIds = requestWithdrawViaETH(msg.sender, stakingBalance);
 
         emit LidoWithdrawalRequested(msg.sender, vaultEndedWithdrawalRequestIds, side, true, true);
         // need to call finalizeVaultEndedWithdrawals once request is processed
@@ -771,18 +791,22 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
       // Return proportional share of both earnings to caller
       uint256 stakingShareAmount = 0;
-
-      uint256 totalEarnings = vaultEndingETHBalance.mulDiv(withdrawnStakingEarningsInStakes,vaultEndingStakesAmount) - totalProtocolFee  + vaultEndedStakingEarnings;
-
-      if (totalEarnings > 0) {
-        (uint256 currentState, uint256 stakingEarningsShare) = calculateVariableWithdrawState(
-          totalEarnings,
-          variableToWithdrawnStakingEarningsInShares[msg.sender].mulDiv(vaultEndingETHBalance, vaultEndingStakesAmount)
-        );
-        stakingShareAmount = stakingEarningsShare;
-        variableToWithdrawnStakingEarningsInShares[msg.sender] = currentState.mulDiv(vaultEndingStakesAmount,vaultEndingETHBalance);
-        variableToWithdrawnStakingEarnings[msg.sender] = currentState;
+      if (vaultEndingETHBalance >= MIN_STETH_WITHDRAWAL_AMOUNT) {
+        uint256 totalEarnings = Math.max(withdrawnStakingEarnings,
+             vaultEndingETHBalance.mulDiv(withdrawnStakingEarningsInStakes - ongoingProtocolFeeInShares,vaultEndingStakesAmount)) + vaultEndedStakingEarnings;
+        if (totalEarnings > 0) {
+          (uint256 currentState, uint256 stakingEarningsShare) = calculateVariableWithdrawState(
+            totalEarnings,
+            Math.max((variableToWithdrawnStakingEarningsInShares[msg.sender] - variableToWithdrawnProtocolFeeInShares[msg.sender]).mulDiv(vaultEndingETHBalance, vaultEndingStakesAmount),
+            variableToWithdrawnStakingEarnings[msg.sender])
+          );
+          stakingShareAmount = Math.min(stakingEarningsShare, vaultEndedStakingEarnings - vaultEndedWithdrawnStakingEarnings);
+          vaultEndedWithdrawnStakingEarnings += stakingShareAmount;
+          variableToWithdrawnStakingEarningsInShares[msg.sender] += stakingShareAmount.mulDiv(vaultEndingStakesAmount,vaultEndingETHBalance);
+          variableToWithdrawnStakingEarnings[msg.sender] += stakingShareAmount;
+        }
       }
+
 
       uint256 feeShareAmount = 0;
       if (withdrawnFeeEarnings + feeEarnings > 0) {
@@ -879,10 +903,12 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   /// @return (ethAmountOwed) The amount to withdraw
   function getCalculateVariableWithdrawStateWithStakingBalance(address user) public view returns (uint256) {
     uint256 lidoStETHBalance = stakingBalance();
+    uint256 currentStakes = stakingShares();
     uint256 fixedETHDeposits = fixedETHDepositTokenTotalSupply;
     require(lidoStETHBalance > fixedETHDeposits, "LBL");
-    uint256 totalEarnings = (lidoStETHBalance - fixedETHDeposits) + withdrawnStakingEarnings + totalProtocolFee;
-    uint256 previousWithdrawnAmount = variableToWithdrawnStakingEarnings[user].mulDiv(10000, 10000 - protocolFeeBps);
+
+    uint256 totalEarnings = lidoStETHBalance.mulDiv(currentStakes + withdrawnStakingEarningsInStakes, currentStakes) - fixedETHDeposits
+    uint256 previousWithdrawnAmount = variableToWithdrawnStakingEarningsInShares[msg.sender].mulDiv(lidoStETHBalance, currentStakes);
 
     uint256 bearerBalance = variableBearerToken[user];
     require(bearerBalance > 0, "NBT");
@@ -1110,15 +1136,6 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
     // get stETH amount corresponding to shares
     uint256 stETHAmount = lido.getPooledEthByShares(shares);
-
-    return requestWithdrawViaETH(user, stETHAmount);
-  }
-
-  /// @notice Request a withdrawal of the entire stETH balance of the contract
-  /// @param user Address of the user that is requesting the withdraw
-  /// @return requestIds Ids of the withdrawal requests
-  function requestEntireBalanceWithdraw(address user) internal returns (uint256[] memory) {
-    uint256 stETHAmount = stakingBalance();
 
     return requestWithdrawViaETH(user, stETHAmount);
   }
