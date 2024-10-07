@@ -15,6 +15,7 @@
 | IFR    | Invalid Fee Receiver                 |
 | IS     | Invalid Side                         |
 | ISS    | Invalid StETH Shares                 |
+| IVC    | Invalid Variable Side Capacity          |
 | IWA    | Invalid Lido Withdrawn Amount        |
 | IWR    | Invalid Lido Withdrawal Response     |
 | LRC    | Lock Receiver of the Contract        |
