@@ -55,7 +55,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   /// @notice Penalty fee in basis points for fixed side early withdrawals that is quadratically scaled based off of the amount of time that has elapsed since the vault started
   uint256 public earlyExitFeeBps;
 
-   /// @notice Total stETH capacity of the fixed side on vault start
+  /// @notice Total stETH capacity of the fixed side on vault start
   uint256 public fixedSidestETHOnStartCapacity;
 
   /// @notice Minimum amount of ETH that can be deposited for variable or fixed side users
@@ -382,8 +382,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
     // Start the vault if we're at capacity
     if (
-      fixedETHDepositTokenTotalSupply == fixedSideCapacity &&
-      variableBearerTokenTotalSupply == variableSideCapacity
+      fixedETHDepositTokenTotalSupply == fixedSideCapacity && variableBearerTokenTotalSupply == variableSideCapacity
     ) {
       startTime = block.timestamp;
       endTime = block.timestamp + duration;
@@ -444,10 +443,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
         // Request withdrawal of their stETH shares
         // Add the requestIds associated with the user who submitted the withdrawal
-        fixedToVaultNotStartedWithdrawalRequestIds[msg.sender] = requestWithdrawViaShares(
-          msg.sender,
-          claimBalance
-        );
+        fixedToVaultNotStartedWithdrawalRequestIds[msg.sender] = requestWithdrawViaShares(msg.sender, claimBalance);
 
         emit LidoWithdrawalRequested(
           msg.sender,
@@ -489,7 +485,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
         // since the vault has started only withdraw their initial deposit equivalent in stETH  at the start of the vault- unless we are in a loss
         uint256 fixedETHDeposits = fixedSidestETHOnStartCapacity;
         uint256 withdrawAmount = fixedETHDeposits.mulDiv(fixedBearerToken[msg.sender], fixedLidoSharesTotalSupply());
-        uint256 lidoStETHBalance = stakingBalance(); 
+        uint256 lidoStETHBalance = stakingBalance();
 
         if (fixedETHDeposits > lidoStETHBalance) {
           // our staking balance if less than our  stETH deposits at the start of the vault - only return a proportional amount of the balance to the fixed user
@@ -591,6 +587,19 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     }
   }
 
+  /// @notice Withdraw early Exit fee from the vault
+  function withdrawEarlyExitFee() external {
+    uint256 bearerBalance = variableBearerToken[msg.sender];
+    require(bearerBalance > 0, "NBT");
+    if (feeEarnings > 0) {
+      uint256 feeEarningsShare = calculateVariableFeeEarningsShare();
+      if (feeEarningsShare > 0) {
+        transferWithdrawnFunds(msg.sender, feeEarningsShare);
+        emit VariableFundsWithdrawn(feeEarningsShare, msg.sender, true, false);
+      }
+    }
+  }
+
   /// @notice Finalize a fixed withdrawal that was requested before the vault started
   function finalizeVaultNotStartedFixedWithdrawals() external {
     uint256[] memory requestIds = fixedToVaultNotStartedWithdrawalRequestIds[msg.sender];
@@ -627,9 +636,9 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   /// @notice Finalize a variable withdrawal that was requested after the vault has started
   function finalizeVaultOngoingVariableWithdrawals() external {
     uint256[] memory requestIds = variableToVaultOngoingWithdrawalRequestIds[msg.sender];
-    if(variableToPendingWithdrawalAmount[msg.sender] != 0) {
+    if (variableToPendingWithdrawalAmount[msg.sender] != 0) {
       withdrawAmountVariablePending();
-      if(requestIds.length == 0) {
+      if (requestIds.length == 0) {
         return;
       }
     }
@@ -694,6 +703,8 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     if (amountWithdrawn > fixedETHDeposit) {
       vaultEndedStakingEarnings = amountWithdrawn - fixedETHDeposit;
       vaultEndedFixedDepositsFunds = fixedETHDeposit;
+      vaultEndingStakesAmount -= (fixedETHDeposit * vaultEndingStakesAmount) / vaultEndingETHBalance;
+      vaultEndingETHBalance = vaultEndedStakingEarnings;
     } else {
       vaultEndedFixedDepositsFunds = amountWithdrawn;
     }
@@ -765,10 +776,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
         uint256 bearerBalance = fixedBearerToken[msg.sender];
         //uint256 bearerBalance = fixedBearerToken.balanceOf(msg.sender);
         require(bearerBalance > 0, "NBT");
-        sendAmount = fixedBearerToken[msg.sender].mulDiv(
-          vaultEndedFixedDepositsFunds,
-          fixedLidoSharesTotalSupply()
-        );
+        sendAmount = fixedBearerToken[msg.sender].mulDiv(vaultEndedFixedDepositsFunds, fixedLidoSharesTotalSupply());
 
         fixedBearerToken[msg.sender] = 0;
         fixedBearerTokenTotalSupply -= bearerBalance;
@@ -827,7 +835,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
   /// @notice Returns all fixed side Lido shares - claimed or unclaimed
   /// @return totalSupply Total supply of the fixed bearer and claim tokens
   function fixedLidoSharesTotalSupply() internal view returns (uint256) {
-	return fixedBearerTokenTotalSupply + fixedClaimTokenTotalSupply;
+    return fixedBearerTokenTotalSupply + fixedClaimTokenTotalSupply;
   }
 
   /// @notice Helper function to claim a Lido fixed withdrawal that was requested after the vault has started
@@ -884,7 +892,6 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     uint256 totalEarnings,
     uint256 previousWithdrawnAmount
   ) internal view returns (uint256, uint256) {
-
     uint256 bearerBalance = variableBearerToken[msg.sender];
     require(bearerBalance > 0, "NBT");
 
@@ -920,7 +927,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     }
     return ethAmountOwed;
   }
-  
+
   /// @notice Helper function to calculate the ongoing variable withdraw state for user
   /// The vault must track a variable user's withdrawals during the duration of the vault since withdrawals can be executed at any time
   /// @param totalEarnings Amount of staking or fee earnings
@@ -932,7 +939,6 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     uint256 previousWithdrawnAmount,
     address user
   ) internal view returns (uint256, uint256) {
-
     uint256 bearerBalance = variableBearerToken[user];
     require(bearerBalance > 0, "NBT");
 
@@ -944,7 +950,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
     return (ethAmountOwed + previousWithdrawnAmount, ethAmountOwed);
   }
-  
+
   /// @notice Helper function to calculate a variable user's proportional amount of fees that they are owed
   /// @param user for which the variable amount of the user proportional to the commission due to him is calculated
   /// @return (currentState, feeEarningsShare) The new total amount of earnings withdrawn, the amount to fee share
@@ -1015,7 +1021,7 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     );
 
     // Calculate the scaling fee based on the linear factor and earlyExitFeeBps
-    uint256 earlyExitFees = upfrontPremium.mulDiv( (1 + earlyExitFeeBps).mulDiv(remainingProportion, 1e18), 10000);
+    uint256 earlyExitFees = upfrontPremium.mulDiv((1 + earlyExitFeeBps).mulDiv(remainingProportion, 1e18), 10000);
 
     // Calculate the amount to be paid back of their original upfront claimed premium, not influenced by quadratic scaling
     earlyExitFees += upfrontPremium - upfrontPremium.mulDiv(timestampRequested - startTime, duration);
@@ -1244,5 +1250,4 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
 
     return withdrawalAmounts;
   }
-
 }

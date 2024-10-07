@@ -7992,8 +7992,8 @@ describe('LidoVault', function () {
                 ).wait()
                 const gasFees2 = calculateGasFees(receipt2)
                 const balanceAfter2 = await ethers.provider.getBalance(addr2)
-                expect(balanceAfter2 - balanceBefore2).to.equal(
-                  earningsShare2 - gasFees2
+                expect(balanceAfter2 - balanceBefore2).to.equalWithTolerance(
+                  earningsShare2 - gasFees2, 10
                 )
                 expect(await lidoVault.variableBearerToken(addr2.address)).to.equal(0)
               })

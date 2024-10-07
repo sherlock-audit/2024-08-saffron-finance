@@ -70,10 +70,10 @@ uint256 appliedProtocolFee
 
 ETH amount that tracks the Saffron protocol fee applied to withdrawn Lido staking earnings. It is reset when the fee reciever withdraws
 
-### totalProtocolFee
+### ongoingProtocolFeeInShares
 
 ```solidity
-uint256 totalProtocolFee
+uint256 ongoingProtocolFeeInShares
 ```
 
 ETH amount that tracks the total Saffron protocol fee from variable withdrawal staking earnings while the vault is still ongoing
@@ -267,6 +267,14 @@ uint256 vaultEndedFixedDepositsFunds
 ```
 
 Amount of ETH used to cover the returning of fixed user's initial principal
+
+### vaultEndedWithdrawnStakingEarnings
+
+```solidity
+uint256 vaultEndedWithdrawnStakingEarnings
+```
+
+Amount of earnings in ETH from Lido Staking after the vault has ended that was already withdrawn
 
 ### userToFixedUpfrontPremium
 
@@ -643,6 +651,14 @@ Withdraw from the vault
 | ---- | ---- | ----------- |
 | side | uint256 | ID of side to withdraw from |
 
+### withdrawEarlyExitFee
+
+```solidity
+function withdrawEarlyExitFee() external
+```
+
+Withdraw early Exit fee from the vault
+
 ### finalizeVaultNotStartedFixedWithdrawals
 
 ```solidity
@@ -875,6 +891,26 @@ function calculateVariableFeeEarningsShare() internal returns (uint256)
 ```
 
 Helper function to calculate a variable user's proportional amount of fees that they are owed
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | amount The amount to give the user |
+
+### calculateVariableFeeEarningsShareWithUser
+
+```solidity
+function calculateVariableFeeEarningsShareWithUser(address user) internal returns (uint256)
+```
+
+A helper function to calculate the proportional amount of the reward due to the user that is passed in the variable
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| user | address | to whom the reward amount is due |
 
 #### Return Values
 
