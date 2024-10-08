@@ -585,6 +585,19 @@ contract LidoVault is ILidoVaultInitializer, ILidoVault {
     }
   }
 
+  /// @notice Withdraw early Exit fee from the vault
+  function withdrawEarlyExitFee() external {
+    uint256 bearerBalance = variableBearerToken[msg.sender];
+    require(bearerBalance > 0, "NBT");
+    if (feeEarnings > 0) {
+      uint256 feeEarningsShare = calculateVariableFeeEarningsShare();
+      if (feeEarningsShare > 0) {
+        transferWithdrawnFunds(msg.sender, feeEarningsShare);
+        emit VariableFundsWithdrawn(feeEarningsShare, msg.sender, true, false);
+      }
+    }
+  }
+
   /// @notice Finalize a fixed withdrawal that was requested before the vault started
   function finalizeVaultNotStartedFixedWithdrawals() external {
     uint256[] memory requestIds = fixedToVaultNotStartedWithdrawalRequestIds[msg.sender];

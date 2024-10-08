@@ -1,0 +1,2161 @@
+diff a/lido-fiv/docs/index.md b/lido-fiv/docs/index.md	(rejected hunks)
+@@ -1,536 +1,5 @@
+ # Solidity API
+ 
+-## Initialized
+-
+-This contract extends the Initializable contract with a modifier that requires the contract be initialized
+-
+-### isInitialized
+-
+-```solidity
+-modifier isInitialized()
+-```
+-
+-This modifier checks if the contract's initializer function has been called
+-
+-### initialized
+-
+-```solidity
+-function initialized() external view returns (bool)
+-```
+-
+-Returns true if the initializer has been called
+-
+-## LidoAdapter
+-
+-### id
+-
+-```solidity
+-uint256 id
+-```
+-
+-Adapter ID set by the factory
+-
+-### lido
+-
+-```solidity
+-contract ILido lido
+-```
+-
+-Lido contract
+-
+-### lidoWithdrawalQueue
+-
+-```solidity
+-contract ILidoWithdrawalQueueERC721 lidoWithdrawalQueue
+-```
+-
+-Lido withdrawal queue contract
+-
+-### admin
+-
+-```solidity
+-address admin
+-```
+-
+-Address that can call admin actions
+-
+-### vault
+-
+-```solidity
+-address vault
+-```
+-
+-Vault address
+-
+-### LIDO_ERROR_TOLERANCE_ETH
+-
+-```solidity
+-uint256 LIDO_ERROR_TOLERANCE_ETH
+-```
+-
+-ETH diff tolerance either for the expected deposit or withdraw from Lido - some rounding errors of a few wei seem to occur
+-
+-### VaultSet
+-
+-```solidity
+-event VaultSet(address vault, address setter)
+-```
+-
+-Emitted when the vault contract address is updated
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| vault | address | New vault address |
+-| setter | address | Address of setter |
+-
+-### AdminSet
+-
+-```solidity
+-event AdminSet(address admin, address setter)
+-```
+-
+-Emitted when the admin address is updated
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| admin | address | New admin address |
+-| setter | address | Address of setter |
+-
+-### FundsStaked
+-
+-```solidity
+-event FundsStaked(uint256 amount, uint256 shares, address user)
+-```
+-
+-Emitted when ETH is submitted to the Lido platform for staking
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| amount | uint256 | ETH amount staked |
+-| shares | uint256 | Amount of shares received for the ETH staked |
+-| user | address | User address |
+-
+-### FundsTransferred
+-
+-```solidity
+-event FundsTransferred(uint256 amount, address recipient)
+-```
+-
+-Emitted when withdrawn funds are transferred out of this contract
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| amount | uint256 | ETH amount transferred |
+-| recipient | address | Address of receiver of the funds |
+-
+-### TransferredStETH
+-
+-```solidity
+-event TransferredStETH(uint256 amount, address recipient)
+-```
+-
+-Emitted when stETH funds are transferred out of this contract
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| amount | uint256 | ETH amount transferred |
+-| recipient | address | Address of receiver of the stETH |
+-
+-### TransferredWithdrawalERC721
+-
+-```solidity
+-event TransferredWithdrawalERC721(uint256 requestId, address recipient)
+-```
+-
+-Emitted when a Lido withdrawal request ERC721 is transferred out of this contract
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| requestId | uint256 | Request id of the Lido withdrawal request |
+-| recipient | address | Address of receiver of the ERC721 |
+-
+-### WithdrawalRequested
+-
+-```solidity
+-event WithdrawalRequested(uint256 amount, uint256[] requestIds, address user)
+-```
+-
+-Emitted when stakings funds are requested to be withdrawn from Lido
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| amount | uint256 | ETH amount requested to be withdrawn |
+-| requestIds | uint256[] | Request ids of the Lido withdrawal requests |
+-| user | address | User address |
+-
+-### WithdrawalClaimed
+-
+-```solidity
+-event WithdrawalClaimed(uint256 amount, uint256[] requestIds, address user)
+-```
+-
+-Emitted when a Lido fixed withdrawal is claimed and the ETH is transferred to this contract
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| amount | uint256 | ETH amount withdrawn |
+-| requestIds | uint256[] | Request ids of the Lido withdrawal requests |
+-| user | address | User address |
+-
+-### onlyVault
+-
+-```solidity
+-modifier onlyVault()
+-```
+-
+-This modifier checks that the sender is the vault address
+-
+-### onlyAdmin
+-
+-```solidity
+-modifier onlyAdmin()
+-```
+-
+-This modifier checks that the sender is the admin address
+-
+-### constructor
+-
+-```solidity
+-constructor() public
+-```
+-
+-_Vault factory will always be the owner_
+-
+-### initialize
+-
+-```solidity
+-function initialize(uint256 _id, address _admin) external
+-```
+-
+-Initializes the adapter
+-
+-_Make sure this is only callable by the vault creator_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _id | uint256 |  |
+-| _admin | address |  |
+-
+-### receive
+-
+-```solidity
+-receive() external payable
+-```
+-
+-Function to receive Ether. msg.data must be empty
+-
+-### renounceOwnership
+-
+-```solidity
+-function renounceOwnership() public
+-```
+-
+-Disable ownership renunciation
+-
+-### owner
+-
+-```solidity
+-function owner() public view returns (address)
+-```
+-
+-Owner of contract - set in the constructor to the contract creator
+-
+-### minStETHWithdrawalAmount
+-
+-```solidity
+-function minStETHWithdrawalAmount() external pure returns (uint256)
+-```
+-
+-The minimum amount of stETH that can be withdrawn from Lido
+-
+-### maxStETHWithdrawalAmount
+-
+-```solidity
+-function maxStETHWithdrawalAmount() external pure returns (uint256)
+-```
+-
+-The maximum amount of stETH that can be withdrawn from Lido in a single request
+-If desired amount to withdraw is greater than the value it has to be broken up into multiple requests
+-
+-### setAdmin
+-
+-```solidity
+-function setAdmin(address _admin) external
+-```
+-
+-Updates the admin address
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _admin | address | Admin address |
+-
+-### setVault
+-
+-```solidity
+-function setVault(address _vault) public virtual
+-```
+-
+-Updates the vault contract address
+-
+-_Make sure this is only callable by the vault creator_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _vault | address |  |
+-
+-### stakingBalance
+-
+-```solidity
+-function stakingBalance() public view returns (uint256)
+-```
+-
+-Balance of stETH tokens, which is dynamic based off of staking rewards https://docs.lido.fi/contracts/lido#rebase
+-
+-### stakeFunds
+-
+-```solidity
+-function stakeFunds(address user) external payable returns (uint256)
+-```
+-
+-Stakes ETH on Lido and returns stETH
+-
+-_Make sure this is only callable by the vault_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is staking the funds |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | shares amount of Lido shares issued for the staked ETH |
+-
+-### transferStETH
+-
+-```solidity
+-function transferStETH(address recipient, uint256 amount) external
+-```
+-
+-Transfers the stETH balance to another address
+-
+-_Make sure this is only callable by the vault_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| recipient | address | Address to transfer stETH to |
+-| amount | uint256 | Amount of stETH to transfer |
+-
+-### transferWithdrawalERC721
+-
+-```solidity
+-function transferWithdrawalERC721(address recipient, uint256 requestId) external
+-```
+-
+-Transfers a Lido ERC721 representing a staking withdrawal request
+-
+-_Make sure this is only callable by the vault_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| recipient | address | Address to transfer to |
+-| requestId | uint256 | Lido withdrawal request id |
+-
+-### transferWithdrawnFunds
+-
+-```solidity
+-function transferWithdrawnFunds(address recipient, uint256 amount) external
+-```
+-
+-Transfers ETH unstaked from Lido
+-
+-_Make sure this is only callable by the vault_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| recipient | address | Address to transfer to |
+-| amount | uint256 | Amount of ETH |
+-
+-### requestWithdrawViaShares
+-
+-```solidity
+-function requestWithdrawViaShares(address user, uint256 shares) external returns (uint256[])
+-```
+-
+-Request a withdrawal on Lido to exchange stETH for ETH via shares amount
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
+-| shares | uint256 | Amount of staking shares to withdraw. Will be used to calculate the actual stETH amount to withdraw |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+-
+-### requestEntireBalanceWithdraw
+-
+-```solidity
+-function requestEntireBalanceWithdraw(address user) external returns (uint256[])
+-```
+-
+-Request a withdrawal of the entire stETH balance of the contract
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+-
+-### requestWithdrawViaETH
+-
+-```solidity
+-function requestWithdrawViaETH(address user, uint256 stETHAmount) public returns (uint256[])
+-```
+-
+-Request a withdrawal on Lido to exchange stETH for ETH via stETH amount
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
+-| stETHAmount | uint256 | Amount of stETH to withdraw |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+-
+-### _requestWithdraw
+-
+-```solidity
+-function _requestWithdraw(address user, uint256 stETHAmount) internal returns (uint256[])
+-```
+-
+-Request a withdrawal on Lido to exchange stETH for ETH
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address |  |
+-| stETHAmount | uint256 | amount of stETH to withdraw |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+-
+-### claimWithdrawals
+-
+-```solidity
+-function claimWithdrawals(address user, uint256[] requestIds) external returns (uint256)
+-```
+-
+-Claim a withdrawal request on Lido once it has been finalized. This will transfer ETH to the contract if successful
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is claiming the withdraw |
+-| requestIds | uint256[] | Withdrawal request ids to claim |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | amount of ETH withdrawn |
+-
+-### _claimWithdrawals
+-
+-```solidity
+-function _claimWithdrawals(address user, uint256[] requestIds) internal returns (uint256)
+-```
+-
+-Claim a withdrawal request on Lido once it has been finalized
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address |  |
+-| requestIds | uint256[] | Ids of the withdrawal requests |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | amount of ETH withdrawn |
+-
+-### calculateWithdrawals
+-
+-```solidity
+-function calculateWithdrawals(uint256 stETHAmount) internal pure returns (uint256[])
+-```
+-
+-Helper function to calculate how many requests will be needed to unstake from Lido due to the maximum withdrawal amount per request
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| stETHAmount | uint256 | stETH amount requested to be withdrawn |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256[] | withdrawalAmounts an array of the amounts to withdraw in each withdrawal request to Lido |
+-
+ ## LidoVault
+ 
+ ### id
+@@ -585,14 +54,6 @@ uint256 variableSideCapacity
+ 
+ Total capacity of the variable side
+ 
+-### fixedPremiumBps
+-
+-```solidity
+-uint256 fixedPremiumBps
+-```
+-
+-Upfront premium of the fixed principal fixed side depositors receive from variable depositors
+-
+ ### protocolFeeBps
+ 
+ ```solidity
+@@ -609,10 +70,10 @@ uint256 appliedProtocolFee
+ 
+ ETH amount that tracks the Saffron protocol fee applied to withdrawn Lido staking earnings. It is reset when the fee reciever withdraws
+ 
+-### totalProtocolFee
++### ongoingProtocolFeeInShares
+ 
+ ```solidity
+-uint256 totalProtocolFee
++uint256 ongoingProtocolFeeInShares
+ ```
+ 
+ ETH amount that tracks the total Saffron protocol fee from variable withdrawal staking earnings while the vault is still ongoing
+@@ -633,13 +94,13 @@ uint256 earlyExitFeeBps
+ 
+ Penalty fee in basis points for fixed side early withdrawals that is quadratically scaled based off of the amount of time that has elapsed since the vault started
+ 
+-### admin
++### fixedSidestETHOnStartCapacity
+ 
+ ```solidity
+-address admin
++uint256 fixedSidestETHOnStartCapacity
+ ```
+ 
+-Address that can call admin actions
++Total stETH capacity of the fixed side on vault start
+ 
+ ### minimumDepositAmount
+ 
+@@ -649,49 +110,82 @@ uint256 minimumDepositAmount
+ 
+ Minimum amount of ETH that can be deposited for variable or fixed side users
+ 
++### minimumFixedDepositBps
++
++```solidity
++uint256 minimumFixedDepositBps
++```
++
++Minimum amount of the fixed capacity that can be deposited for fixed side users on a single deposit in basis points
++
+ ### fixedClaimToken
+ 
+ ```solidity
+-contract IVaultBearerToken fixedClaimToken
++mapping(address => uint256) fixedClaimToken
+ ```
+ 
+-ERC20 bearer token that entitles owner to a portion of the fixed side bearer tokens and the variable side premium payment
++Mock ERC20 bearer token that entitles owner to a portion of the fixed side bearer tokens and the variable side premium payment
+ It represents the amount of StETH shares generated from Lido staking submit on fixed side deposits
+ 
+ _If the vault hasn't started, this is used to return the fixed side deposit_
+ 
++### fixedClaimTokenTotalSupply
++
++```solidity
++uint256 fixedClaimTokenTotalSupply
++```
++
+ ### fixedBearerToken
+ 
+ ```solidity
+-contract IVaultBearerToken fixedBearerToken
++mapping(address => uint256) fixedBearerToken
++```
++
++Mock ERC20 bearer token that entitles owner to a portion of the fixed side deposits after the vault has ended and the ETH has been unstaked from Lido
++
++### fixedBearerTokenTotalSupply
++
++```solidity
++uint256 fixedBearerTokenTotalSupply
++```
++
++### fixedIntialTokenTotalSupply
++
++```solidity
++uint256 fixedIntialTokenTotalSupply
+ ```
+ 
+-ERC20 bearer token that entitles owner to a portion of the fixed side deposits after the vault has ended and the ETH has been unstaked from Lido
++Mock ERC20 bearer token that entitles owner to a portion of the fixed side bearer tokens and the variable side premium payment
++It represents total amount of StETH shares generated from Lido staking submit on fixed side deposits
+ 
+ ### fixedETHDepositToken
+ 
+ ```solidity
+-contract IVaultBearerToken fixedETHDepositToken
++mapping(address => uint256) fixedETHDepositToken
+ ```
+ 
+-ERC20 bearer token that tracks fixed user's ETH deposits in order to determine when the fixed capacity is reached
++Mock ERC20 bearer token that tracks fixed user's ETH deposits in order to determine when the fixed capacity is reached
++
++### fixedETHDepositTokenTotalSupply
++
++```solidity
++uint256 fixedETHDepositTokenTotalSupply
++```
+ 
+ ### variableBearerToken
+ 
+ ```solidity
+-contract IVaultBearerToken variableBearerToken
++mapping(address => uint256) variableBearerToken
+ ```
+ 
+-ERC20 bearer token that entitles owner to a portion of the vault earnings
++Mock ERC20 bearer token that entitles owner to a portion of the vault earnings
+ 
+-### lidoAdapter
++### variableBearerTokenTotalSupply
+ 
+ ```solidity
+-contract ILidoAdapter lidoAdapter
++uint256 variableBearerTokenTotalSupply
+ ```
+ 
+-Contract that interacts with Lido to stake / unstake
+-
+ ### feeEarnings
+ 
+ ```solidity
+@@ -708,6 +202,14 @@ uint256 withdrawnFeeEarnings
+ 
+ Fee earnings that have been withdrawn from the variable side
+ 
++### withdrawnStakingEarningsInStakes
++
++```solidity
++uint256 withdrawnStakingEarningsInStakes
++```
++
++Amount of earnings from Lido Staking in lido stakes already withdrawn by variable depositors
++
+ ### withdrawnStakingEarnings
+ 
+ ```solidity
+@@ -742,6 +244,22 @@ uint256 vaultEndedStakingEarnings
+ 
+ Amount of earnings in ETH from Lido Staking after the vault has ended
+ 
++### vaultEndingStakesAmount
++
++```solidity
++uint256 vaultEndingStakesAmount
++```
++
++Amount of lido stETH stakes in Lido Vault at the moment of vault has ending
++
++### vaultEndingETHBalance
++
++```solidity
++uint256 vaultEndingETHBalance
++```
++
++Balance of Lido Vault in ETH at the moment of vault has ending
++
+ ### vaultEndedFixedDepositsFunds
+ 
+ ```solidity
+@@ -750,6 +268,14 @@ uint256 vaultEndedFixedDepositsFunds
+ 
+ Amount of ETH used to cover the returning of fixed user's initial principal
+ 
++### vaultEndedWithdrawnStakingEarnings
++
++```solidity
++uint256 vaultEndedWithdrawnStakingEarnings
++```
++
++Amount of earnings in ETH from Lido Staking after the vault has ended that was already withdrawn
++
+ ### userToFixedUpfrontPremium
+ 
+ ```solidity
+@@ -797,6 +323,18 @@ Add getter functions for each field in the struct b/c the compiler doesn't know
+ function getFixedOngoingWithdrawalRequestIds(address user) public view returns (uint256[])
+ ```
+ 
++### getFixedToVaultNotStartedWithdrawalRequestIds
++
++```solidity
++function getFixedToVaultNotStartedWithdrawalRequestIds(address user) public view returns (uint256[])
++```
++
++### getVariableToVaultOngoingWithdrawalRequestIds
++
++```solidity
++function getVariableToVaultOngoingWithdrawalRequestIds(address user) public view returns (uint256[])
++```
++
+ ### fixedOngoingWithdrawalUsers
+ 
+ ```solidity
+@@ -814,6 +352,15 @@ mapping(address => uint256) fixedToPendingWithdrawalAmount
+ When the vault ends ongoing fixed withdrawals may be claimed by another user
+ this stores the amount they should be given when the user eventually withdraws
+ 
++### variableToPendingWithdrawalAmount
++
++```solidity
++mapping(address => uint256) variableToPendingWithdrawalAmount
++```
++
++Mapping from variable side user addresses to their withdrawal amount after the vault has started
++this stores the amount they should be given when the user eventually withdraws
++
+ ### variableToVaultOngoingWithdrawalRequestIds
+ 
+ ```solidity
+@@ -830,6 +377,22 @@ mapping(address => uint256) variableToWithdrawnStakingEarnings
+ 
+ Mapping from variable side user addresses to their total withdrawn staking earnings amount right after their Lido withdrawal request is submitted
+ 
++### variableToWithdrawnStakingEarningsInShares
++
++```solidity
++mapping(address => uint256) variableToWithdrawnStakingEarningsInShares
++```
++
++Mapping from variable side user addresses to their total withdrawn staking earnings amount in lido shares right after their Lido withdrawal request is submitted
++
++### variableToWithdrawnProtocolFeeInShares
++
++```solidity
++mapping(address => uint256) variableToWithdrawnProtocolFeeInShares
++```
++
++Mapping from variable side user addresses to their total payed protocol fee amount right after their Lido withdrawal request is submitted
++
+ ### variableToWithdrawnFees
+ 
+ ```solidity
+@@ -841,7 +404,7 @@ Mapping from variable side user addresses to their total withdrawn fees amount r
+ ### VaultInitialized
+ 
+ ```solidity
+-event VaultInitialized(uint256 vaultId, uint256 duration, uint256 variableSideCapacity, uint256 fixedSideCapacity, uint256 fixedPremiumBps, uint256 earlyExitFeeBps, uint256 protocolFeeBps, address protocolFeeReceiver, address admin, address adapter)
++event VaultInitialized(uint256 vaultId, uint256 duration, uint256 variableSideCapacity, uint256 fixedSideCapacity, uint256 earlyExitFeeBps, uint256 protocolFeeBps, address protocolFeeReceiver)
+ ```
+ 
+ Emitted when a new vault is initialized
+@@ -854,57 +417,9 @@ Emitted when a new vault is initialized
+ | duration | uint256 | How long the vault will be locked once started, in seconds |
+ | variableSideCapacity | uint256 | Maximum capacity of variable side |
+ | fixedSideCapacity | uint256 | Maximum capacity of fixed side |
+-| fixedPremiumBps | uint256 | Fixed depositor premium in basis points |
+ | earlyExitFeeBps | uint256 | Fixed depositor early exit fee in basis points |
+ | protocolFeeBps | uint256 | Protocol fee in basis points |
+ | protocolFeeReceiver | address | Address that collects protocol fee |
+-| admin | address | Address of vault admin |
+-| adapter | address | Address of adapter |
+-
+-### AdminSet
+-
+-```solidity
+-event AdminSet(address admin, address setter)
+-```
+-
+-Emitted when the admin address is updated
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| admin | address | New admin address |
+-| setter | address | Address of setter |
+-
+-### ProtocolFeeReceiverSet
+-
+-```solidity
+-event ProtocolFeeReceiverSet(address protocolFeeReceiver, address setter)
+-```
+-
+-Emitted when the protocol fee receiver is updated
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| protocolFeeReceiver | address | New protocol fee receiver |
+-| setter | address | Address of setter |
+-
+-### MinimumDepositAmountSet
+-
+-```solidity
+-event MinimumDepositAmountSet(uint256 minimumDepositAmount, address setter)
+-```
+-
+-Emitted when the minimum deposit amount is updated
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| minimumDepositAmount | uint256 | New minimum deposit amount |
+-| setter | address | Address of setter |
+ 
+ ### VariableFundsDeposited
+ 
+@@ -1053,22 +568,12 @@ Emitted when a Lido withdrawal is claimed and the ETH is transferred to the adap
+ | isStarted | bool | Indicates whether the vault has started when the funds were requested to be withdrawn |
+ | isEnded | bool | Indicates whether the vault has ended when the funds were submitted for withdrawal |
+ 
+-### onlyAdmin
+-
+-```solidity
+-modifier onlyAdmin()
+-```
+-
+-This modifier checks that the sender is the admin address
+-
+ ### constructor
+ 
+ ```solidity
+-constructor() public
++constructor(bool _initialize) public
+ ```
+ 
+-_Vault factory will always be the owner_
+-
+ ### initialize
+ 
+ ```solidity
+@@ -1093,14 +598,6 @@ receive() external payable
+ 
+ Function to receive Ether. msg.data must be empty
+ 
+-### renounceOwnership
+-
+-```solidity
+-function renounceOwnership() public
+-```
+-
+-Disable ownership renunciation
+-
+ ### isStarted
+ 
+ ```solidity
+@@ -1116,31 +613,6 @@ function isEnded() public view returns (bool)
+ ```
+ 
+ True if the vault has ended
+-or the admin has settled all debts thus effectively ending the vault
+-
+-### setMinimumDepositAmount
+-
+-```solidity
+-function setMinimumDepositAmount(uint256 _minimumDepositAmount) external
+-```
+-
+-Updates the minimum deposit amount
+-
+-### setProtocolFeeReceiver
+-
+-```solidity
+-function setProtocolFeeReceiver(address _protocolFeeReceiver) external
+-```
+-
+-Updates the protocol fee receiver
+-
+-### setAdmin
+-
+-```solidity
+-function setAdmin(address _admin) external
+-```
+-
+-Updates the admin
+ 
+ ### deposit
+ 
+@@ -1179,6 +651,14 @@ Withdraw from the vault
+ | ---- | ---- | ----------- |
+ | side | uint256 | ID of side to withdraw from |
+ 
++### withdrawEarlyExitFee
++
++```solidity
++function withdrawEarlyExitFee() external
++```
++
++Withdraw early Exit fee from the vault
++
+ ### finalizeVaultNotStartedFixedWithdrawals
+ 
+ ```solidity
+@@ -1203,6 +683,28 @@ function finalizeVaultOngoingVariableWithdrawals() external
+ 
+ Finalize a variable withdrawal that was requested after the vault has started
+ 
++### feeReceiverFinalizeVaultOngoingVariableWithdrawals
++
++```solidity
++function feeReceiverFinalizeVaultOngoingVariableWithdrawals(address user) external
++```
++
++Protocol Fee Reciever only Finalize a variable withdrawal that was requested after the vault has started
++
++#### Parameters
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| user | address | for whom the reward amount is due |
++
++### withdrawAmountVariablePending
++
++```solidity
++function withdrawAmountVariablePending() public
++```
++
++withdrawal of funds for Variable side
++
+ ### finalizeVaultEndedWithdrawals
+ 
+ ```solidity
+@@ -1293,27 +795,93 @@ function protocolFeeReceiverWithdraw() internal
+ 
+ Helper function to withdraw any accrued protocol fees
+ 
+-### calculateVariableWithdrawState
++### calculateVariableWithdrawState
++
++```solidity
++function calculateVariableWithdrawState(uint256 totalEarnings, uint256 previousWithdrawnAmount) internal view returns (uint256, uint256)
++```
++
++Helper function to calculate the ongoing variable withdraw state
++The vault must track a variable user's withdrawals during the duration of the vault since withdrawals can be executed at any time
++
++#### Parameters
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| totalEarnings | uint256 | Amount of staking or fee earnings |
++| previousWithdrawnAmount | uint256 | The total amount of earnings already withdrawn |
++
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256 | (currentState, amountOwed) The new total amount of earnings withdrawn, the amount to withdraw |
++| [1] | uint256 |  |
++
++### getCalculateVariableWithdrawStateWithStakingBalance
++
++```solidity
++function getCalculateVariableWithdrawStateWithStakingBalance(address user) public view returns (uint256)
++```
++
++Helper function to calculate the ongoing variable withdraw state
++The vault must track a variable user's withdrawals during the duration of the vault since withdrawals can be executed at any time
++
++#### Parameters
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| user | address | for whom the withdrawal variable amount is calculated |
++
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256 | (ethAmountOwed) The amount to withdraw |
++
++### calculateVariableWithdrawStateWithUser
++
++```solidity
++function calculateVariableWithdrawStateWithUser(uint256 totalEarnings, uint256 previousWithdrawnAmount, address user) internal view returns (uint256, uint256)
++```
++
++Helper function to calculate the ongoing variable withdraw state for user
++The vault must track a variable user's withdrawals during the duration of the vault since withdrawals can be executed at any time
++
++#### Parameters
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| totalEarnings | uint256 | Amount of staking or fee earnings |
++| previousWithdrawnAmount | uint256 | The total amount of earnings already withdrawn |
++| user | address | for whom the calculation |
++
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256 | (currentState, amountOwed) The new total amount of earnings withdrawn, the amount to withdraw |
++| [1] | uint256 |  |
++
++### getCalculateVariableFeeEarningsShareWithUser
+ 
+ ```solidity
+-function calculateVariableWithdrawState(uint256 totalEarnings, uint256 previousWithdrawnAmount) internal view returns (uint256, uint256)
++function getCalculateVariableFeeEarningsShareWithUser(address user) public view returns (uint256, uint256)
+ ```
+ 
+-Helper function to calculate the ongoing variable withdraw state
+-The vault must track a variable user's withdrawals during the duration of the vault since withdrawals can be executed at any time
++Helper function to calculate a variable user's proportional amount of fees that they are owed
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| totalEarnings | uint256 | Amount of staking or fee earnings |
+-| previousWithdrawnAmount | uint256 | The total amount of earnings already withdrawn |
++| user | address | for which the variable amount of the user proportional to the commission due to him is calculated |
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256 | (currentState, amountOwed) The new total amount of earnings withdrawn, the amount to withdraw |
++| [0] | uint256 | (currentState, feeEarningsShare) The new total amount of earnings withdrawn, the amount to fee share |
+ | [1] | uint256 |  |
+ 
+ ### calculateVariableFeeEarningsShare
+@@ -1353,409 +941,412 @@ The user must also pay back their upfront premium
+ | ---- | ---- | ----------- |
+ | [0] | uint256 | earlyExitFee The total amount of early exit fees to apply |
+ 
+-## NonTransferrableVaultBearerToken
+-
+-### constructor
++### lido
+ 
+ ```solidity
+-constructor(string name, string symbol, address vault) public
++contract ILido lido
+ ```
+ 
+-### transfer
+-
+-```solidity
+-function transfer(address recipient, uint256 amount) public virtual returns (bool)
+-```
++Lido contract
+ 
+-### allowance
++### lidoWithdrawalQueue
+ 
+ ```solidity
+-function allowance(address owner, address spender) public view virtual returns (uint256)
++contract ILidoWithdrawalQueueERC721 lidoWithdrawalQueue
+ ```
+ 
+-### approve
+-
+-```solidity
+-function approve(address spender, uint256 amount) public virtual returns (bool)
+-```
++Lido withdrawal queue contract
+ 
+-### transferFrom
++### LIDO_ERROR_TOLERANCE_ETH
+ 
+ ```solidity
+-function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool)
++uint256 LIDO_ERROR_TOLERANCE_ETH
+ ```
+ 
+-## VaultBearerToken
+-
+-Vaults create these tokens to give vault participants ownership of their positions
++ETH diff tolerance either for the expected deposit or withdraw from Lido - some rounding errors of a few wei seem to occur
+ 
+-### vault
++### VaultSet
+ 
+ ```solidity
+-address vault
++event VaultSet(address vault, address setter)
+ ```
+ 
+-The address of the vault that owns this token
++Emitted when the vault contract address is updated
++
++#### Parameters
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| vault | address | New vault address |
++| setter | address | Address of setter |
+ 
+-### onlyVault
++### FundsStaked
+ 
+ ```solidity
+-modifier onlyVault()
++event FundsStaked(uint256 amount, uint256 shares, address user)
+ ```
+ 
+-This modifier checks that the sender is the vault address
++Emitted when ETH is submitted to the Lido platform for staking
+ 
+-### constructor
++#### Parameters
+ 
+-```solidity
+-constructor(string name, string symbol, address _vault) public
+-```
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| amount | uint256 | ETH amount staked |
++| shares | uint256 | Amount of shares received for the ETH staked |
++| user | address | User address |
+ 
+-### mint
++### FundsTransferred
+ 
+ ```solidity
+-function mint(address _to, uint256 _amount) external
++event FundsTransferred(uint256 amount, address recipient)
+ ```
+ 
+-Mints tokens
+-
+-_Only the owning vault can do this_
++Emitted when withdrawn funds are transferred out of this contract
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| _to | address | The address to mint to |
+-| _amount | uint256 | The amount to mint |
++| amount | uint256 | ETH amount transferred |
++| recipient | address | Address of receiver of the funds |
+ 
+-### burn
++### TransferredStETH
+ 
+ ```solidity
+-function burn(address _account, uint256 _amount) external
++event TransferredStETH(uint256 amount, address recipient)
+ ```
+ 
+-Burns tokens
+-
+-_Only the owning vault can do this_
++Emitted when stETH funds are transferred out of this contract
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| _account | address | The address to burn from |
+-| _amount | uint256 | The amount to burn |
+-
+-## ILido
++| amount | uint256 | ETH amount transferred |
++| recipient | address | Address of receiver of the stETH |
+ 
+-### submit
++### TransferredWithdrawalERC721
+ 
+ ```solidity
+-function submit(address _referral) external payable returns (uint256)
++event TransferredWithdrawalERC721(uint256 requestId, address recipient)
+ ```
+ 
+-Send funds to the pool with optional _referral parameter
+-
+-_This function is alternative way to submit funds. Supports optional referral address._
++Emitted when a Lido withdrawal request ERC721 is transferred out of this contract
+ 
+-#### Return Values
++#### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256 | Amount of StETH shares generated |
++| requestId | uint256 | Request id of the Lido withdrawal request |
++| recipient | address | Address of receiver of the ERC721 |
+ 
+-### transfer
++### WithdrawalRequested
+ 
+ ```solidity
+-function transfer(address _recipient, uint256 _amount) external returns (bool)
++event WithdrawalRequested(uint256 amount, uint256[] requestIds, address user)
+ ```
+ 
+-Moves `_amount` tokens from the caller's account to the `_recipient` account.
++Emitted when stakings funds are requested to be withdrawn from Lido
+ 
+-#### Return Values
++#### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | bool | a boolean value indicating whether the operation succeeded. |
++| amount | uint256 | ETH amount requested to be withdrawn |
++| requestIds | uint256[] | Request ids of the Lido withdrawal requests |
++| user | address | User address |
+ 
+-### approve
++### WithdrawalClaimed
+ 
+ ```solidity
+-function approve(address spender, uint256 amount) external returns (bool)
++event WithdrawalClaimed(uint256 amount, uint256[] requestIds, address user)
+ ```
+ 
+-Sets amount as the allowance of spender over the caller’s StETH tokens.
++Emitted when a Lido fixed withdrawal is claimed and the ETH is transferred to this contract
+ 
+-#### Return Values
++#### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | bool | bool indicating whether the operation succeeded |
++| amount | uint256 | ETH amount withdrawn |
++| requestIds | uint256[] | Request ids of the Lido withdrawal requests |
++| user | address | User address |
+ 
+-### getPooledEthByShares
++### minStETHWithdrawalAmount
+ 
+ ```solidity
+-function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256)
++function minStETHWithdrawalAmount() public pure returns (uint256)
+ ```
+ 
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | uint256 Returns the amount of ether that corresponds to _sharesAmount token shares. |
++The minimum amount of stETH that can be withdrawn from Lido
+ 
+-### balanceOf
++### maxStETHWithdrawalAmount
+ 
+ ```solidity
+-function balanceOf(address account) external view returns (uint256)
++function maxStETHWithdrawalAmount() external pure returns (uint256)
+ ```
+ 
+-#### Return Values
++The maximum amount of stETH that can be withdrawn from Lido in a single request
++If desired amount to withdraw is greater than the value it has to be broken up into multiple requests
+ 
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | uint256 Returns stETH balance of the account |
++### stakingBalance
+ 
+-## ILidoAdapter
++```solidity
++function stakingBalance() public view returns (uint256)
++```
+ 
+-Manages interactions with the Lido staking and withdrawal contracts
++Balance of stETH tokens, which is dynamic based off of staking rewards https://docs.lido.fi/contracts/lido#rebase
+ 
+-### initialize
++### thisBalance
+ 
+ ```solidity
+-function initialize(uint256 id, address admin) external
++function thisBalance() public view returns (uint256)
+ ```
+ 
+-Initializes the adapter
++### stakingShares
+ 
+-_Make sure this is only callable by the vault creator_
+-
+-#### Parameters
++```solidity
++function stakingShares() public view returns (uint256)
++```
+ 
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| id | uint256 | ID of adapter |
+-| admin | address | address of admin |
++Balance of Lido stakes
+ 
+-### setVault
++### transferWithdrawnFunds
+ 
+ ```solidity
+-function setVault(address vault) external
++function transferWithdrawnFunds(address recipient, uint256 amount) internal
+ ```
+ 
+-Updates the vault contract address
++Transfers ETH unstaked from Lido
+ 
+-_Make sure this is only callable by the vault creator_
++_Make sure this is only callable by the vault_
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| vault | address | Vault contract address |
++| recipient | address | Address to transfer to |
++| amount | uint256 | Amount of ETH |
+ 
+-### owner
++### requestWithdrawViaShares
+ 
+ ```solidity
+-function owner() external view returns (address)
++function requestWithdrawViaShares(address user, uint256 shares) internal returns (uint256[])
+ ```
+ 
+-Owner of contract - set in the constructor to the contract creator
+-
+-### vault
+-
+-```solidity
+-function vault() external view returns (address)
+-```
++Request a withdrawal on Lido to exchange stETH for ETH via shares amount
+ 
+-Vault contract address
++#### Parameters
+ 
+-### admin
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| user | address | Address of the user that is requesting the withdraw |
++| shares | uint256 | Amount of staking shares to withdraw. Will be used to calculate the actual stETH amount to withdraw |
+ 
+-```solidity
+-function admin() external view returns (address)
+-```
++#### Return Values
+ 
+-Admin of contract
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+ 
+-### minStETHWithdrawalAmount
++### requestWithdrawViaETH
+ 
+ ```solidity
+-function minStETHWithdrawalAmount() external view returns (uint256)
++function requestWithdrawViaETH(address user, uint256 stETHAmount) internal returns (uint256[])
+ ```
+ 
+-The minimum amount of stETH that can be withdrawn from Lido
+-
+-### maxStETHWithdrawalAmount
+-
+-```solidity
+-function maxStETHWithdrawalAmount() external view returns (uint256)
+-```
++Request a withdrawal on Lido to exchange stETH for ETH via stETH amount
+ 
+-The maximum amount of stETH that can be withdrawn from Lido in a single request
+-If desired amount to withdraw is greater than the value it has to be broken up into multiple requests
++#### Parameters
+ 
+-### stakingBalance
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| user | address | Address of the user that is requesting the withdraw |
++| stETHAmount | uint256 | Amount of stETH to withdraw |
+ 
+-```solidity
+-function stakingBalance() external view returns (uint256)
+-```
++#### Return Values
+ 
+-Balance of stETH tokens, which is dynamic based off of staking rewards https://docs.lido.fi/contracts/lido#rebase
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+ 
+-### stakeFunds
++### _requestWithdraw
+ 
+ ```solidity
+-function stakeFunds(address user) external payable returns (uint256)
++function _requestWithdraw(address user, uint256 stETHAmount) internal returns (uint256[])
+ ```
+ 
+-Stakes ETH on Lido and returns stETH
+-
+-_Make sure this is only callable by the vault_
++Request a withdrawal on Lido to exchange stETH for ETH
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| user | address | Address of the user that is staking the funds |
++| user | address |  |
++| stETHAmount | uint256 | amount of stETH to withdraw |
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256 | shares amount of Lido shares issued for the staked ETH |
++| [0] | uint256[] | requestIds Ids of the withdrawal requests |
+ 
+-### transferStETH
++### claimWithdrawals
+ 
+ ```solidity
+-function transferStETH(address recipient, uint256 amount) external
++function claimWithdrawals(address user, uint256[] requestIds) internal returns (uint256)
+ ```
+ 
+-Transfers the stETH balance to another address
+-
+-_Make sure this is only callable by the vault_
++Claim a withdrawal request on Lido once it has been finalized. This will transfer ETH to the contract if successful
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| recipient | address | Address to transfer stETH to |
+-| amount | uint256 | Amount of stETH to transfer |
++| user | address | Address of the user that is claiming the withdraw |
++| requestIds | uint256[] | Withdrawal request ids to claim |
++
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256 | amount of ETH withdrawn |
+ 
+-### transferWithdrawalERC721
++### _claimWithdrawals
+ 
+ ```solidity
+-function transferWithdrawalERC721(address recipient, uint256 requestId) external
++function _claimWithdrawals(address user, uint256[] requestIds) internal returns (uint256)
+ ```
+ 
+-Transfers a Lido ERC721 representing a staking withdrawal request
+-
+-_Make sure this is only callable by the vault_
++Claim a withdrawal request on Lido once it has been finalized
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| recipient | address | Address to transfer to |
+-| requestId | uint256 | Lido withdrawal request id |
++| user | address |  |
++| requestIds | uint256[] | Ids of the withdrawal requests |
+ 
+-### transferWithdrawnFunds
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256 | amount of ETH withdrawn |
++
++### calculateWithdrawals
+ 
+ ```solidity
+-function transferWithdrawnFunds(address recipient, uint256 amount) external
++function calculateWithdrawals(uint256 stETHAmount) internal pure returns (uint256[])
+ ```
+ 
+-Transfers ETH unstaked from Lido
+-
+-_Make sure this is only callable by the vault_
++Helper function to calculate how many requests will be needed to unstake from Lido due to the maximum withdrawal amount per request
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| recipient | address | Address to transfer to |
+-| amount | uint256 | Amount of ETH |
++| stETHAmount | uint256 | stETH amount requested to be withdrawn |
+ 
+-### requestWithdrawViaShares
++#### Return Values
++
++| Name | Type | Description |
++| ---- | ---- | ----------- |
++| [0] | uint256[] | withdrawalAmounts an array of the amounts to withdraw in each withdrawal request to Lido |
++
++## ILido
++
++### submit
+ 
+ ```solidity
+-function requestWithdrawViaShares(address user, uint256 shares) external returns (uint256[])
++function submit(address _referral) external payable returns (uint256)
+ ```
+ 
+-Request a withdrawal on Lido to exchange stETH for ETH via shares amount
+-
+-#### Parameters
++Send funds to the pool with optional _referral parameter
+ 
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
+-| shares | uint256 | Amount of staking shares to withdraw. Will be used to calculate the actual stETH amount to withdraw |
++_This function is alternative way to submit funds. Supports optional referral address._
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
++| [0] | uint256 | Amount of StETH shares generated |
+ 
+-### requestWithdrawViaETH
++### transfer
+ 
+ ```solidity
+-function requestWithdrawViaETH(address user, uint256 stETHAmount) external returns (uint256[])
++function transfer(address _recipient, uint256 _amount) external returns (bool)
+ ```
+ 
+-Request a withdrawal on Lido to exchange stETH for ETH via stETH amount
++Moves `_amount` tokens from the caller's account to the `_recipient` account.
+ 
+-#### Parameters
++#### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
+-| stETHAmount | uint256 | Amount of stETH to withdraw |
++| [0] | bool | a boolean value indicating whether the operation succeeded. |
++
++### approve
++
++```solidity
++function approve(address spender, uint256 amount) external returns (bool)
++```
++
++Sets amount as the allowance of spender over the caller’s StETH tokens.
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
++| [0] | bool | bool indicating whether the operation succeeded |
+ 
+-### requestEntireBalanceWithdraw
++### getPooledEthByShares
+ 
+ ```solidity
+-function requestEntireBalanceWithdraw(address user) external returns (uint256[])
++function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256)
+ ```
+ 
+-Request a withdrawal of the entire stETH balance of the contract
+-
+-#### Parameters
++#### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| user | address | Address of the user that is requesting the withdraw |
++| [0] | uint256 | uint256 Returns the amount of ether that corresponds to _sharesAmount token shares. |
++
++### getSharesByPooledEth
++
++```solidity
++function getSharesByPooledEth(uint256 _ethAmount) external view returns (uint256)
++```
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256[] | requestIds Ids of the withdrawal requests |
++| [0] | uint256 | the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether. |
+ 
+-### claimWithdrawals
++### balanceOf
+ 
+ ```solidity
+-function claimWithdrawals(address user, uint256[] requestIds) external returns (uint256)
++function balanceOf(address account) external view returns (uint256)
+ ```
+ 
+-Claim a withdrawal request on Lido once it has been finalized. This will transfer ETH to the contract if successful
+-
+-#### Parameters
++#### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| user | address | Address of the user that is claiming the withdraw |
+-| requestIds | uint256[] | Withdrawal request ids to claim |
++| [0] | uint256 | uint256 Returns stETH balance of the account |
++
++### sharesOf
++
++```solidity
++function sharesOf(address _account) external view returns (uint256)
++```
+ 
+ #### Return Values
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| [0] | uint256 | amount of ETH withdrawn |
++| [0] | uint256 | uint256 Returns amount of shares owned by account. |
+ 
+ ## ILidoVault
+ 
+@@ -1786,21 +1377,28 @@ struct InitializationParams {
+   uint256 vaultId;
+   uint256 duration;
+   uint256 fixedSideCapacity;
+-  uint256 fixedPremiumBps;
++  uint256 variableSideCapacity;
+   uint256 earlyExitFeeBps;
+   uint256 protocolFeeBps;
+   address protocolFeeReceiver;
+-  address admin;
+-  address lidoAdapter;
+-  address fixedClaimToken;
+-  address fixedETHDepositToken;
+-  address fixedBearerToken;
+-  address variableBearerToken;
+ }
+ ```
+ 
+ ## ILidoWithdrawalQueueERC721
+ 
++### WithdrawalRequestStatus
++
++```solidity
++struct WithdrawalRequestStatus {
++  uint256 amountOfStETH;
++  uint256 amountOfShares;
++  address owner;
++  uint256 timestamp;
++  bool isFinalized;
++  bool isClaimed;
++}
++```
++
+ ### requestWithdrawals
+ 
+ ```solidity
+@@ -1831,55 +1429,23 @@ function claimWithdrawal(uint256 _requestId) external
+ 
+ Claims the _requestId withdrawal request, sending ether to msg.sender address.
+ 
+-## IVaultBearerToken
+-
+-The vault factory creates these tokens and they are used to give vault participants ownership of their positions
+-
+-### vault
+-
+-```solidity
+-function vault() external view returns (address)
+-```
+-
+-The address of the vault that owns this token
+-
+-### mint
++### getWithdrawalStatus
+ 
+ ```solidity
+-function mint(address _to, uint256 _amount) external
++function getWithdrawalStatus(uint256[] _requestIds) external view returns (struct ILidoWithdrawalQueueERC721.WithdrawalRequestStatus[] statuses)
+ ```
+ 
+-Mints tokens
+-
+-_Only the owning vault can do this_
+-
+-#### Parameters
++## VaultFactory
+ 
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _to | address | The address to mint to |
+-| _amount | uint256 | The amount to mint |
++Configure and deploy vaults
+ 
+-### burn
++### vaultContract
+ 
+ ```solidity
+-function burn(address _account, uint256 _amount) external
++address vaultContract
+ ```
+ 
+-Burns tokens
+-
+-_Only the owning vault can do this_
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _account | address | The address to burn from |
+-| _amount | uint256 | The amount to burn |
+-
+-## VaultFactory
+-
+-Configure and deploy vaults; allow owner to add new adapter types
++Master vault contract to clone from
+ 
+ ### nextVaultId
+ 
+@@ -1889,22 +1455,6 @@ uint256 nextVaultId
+ 
+ Incrementing vault ID
+ 
+-### nextAdapterId
+-
+-```solidity
+-uint256 nextAdapterId
+-```
+-
+-Incrementing adapter ID
+-
+-### nextAdapterTypeId
+-
+-```solidity
+-uint256 nextAdapterTypeId
+-```
+-
+-Incrementing adapter type ID
+-
+ ### protocolFeeBps
+ 
+ ```solidity
+@@ -1929,37 +1479,12 @@ uint256 earlyExitFeeBps
+ 
+ Fixed income early exit fee in basis points (one basis point = 1/100 of 1%) that is quadratically scaled based off of early exit time
+ 
+-### fixedPremiumBps
+-
+-```solidity
+-uint256 fixedPremiumBps
+-```
+-
+-Fixed upfront premium from variable deposits to fixed depositors in basis points (one basis point = 1/100 of 1%)
+-
+-### admin
+-
+-```solidity
+-address admin
+-```
+-
+-Address that can call admin actions on the vault
+-
+-### vaultByteCode
+-
+-```solidity
+-bytes vaultByteCode
+-```
+-
+-Lido Vault bytecode
+-
+ ### VaultInfo
+ 
+ ```solidity
+ struct VaultInfo {
+   address creator;
+   address addr;
+-  address adapter;
+ }
+ ```
+ 
+@@ -1979,40 +1504,6 @@ mapping(address => uint256) vaultAddrToId
+ 
+ ID of vault, mapped by vault address
+ 
+-### AdapterInfo
+-
+-```solidity
+-struct AdapterInfo {
+-  uint256 adapterTypeId;
+-  address creator;
+-  address addr;
+-}
+-```
+-
+-### adapterInfo
+-
+-```solidity
+-mapping(uint256 => struct VaultFactory.AdapterInfo) adapterInfo
+-```
+-
+-Adapter info, mapped by adapter ID
+-
+-### adapterAddrToId
+-
+-```solidity
+-mapping(address => uint256) adapterAddrToId
+-```
+-
+-Adapter ID, mapped by Adapter address
+-
+-### adapterTypeByteCode
+-
+-```solidity
+-mapping(uint256 => bytes) adapterTypeByteCode
+-```
+-
+-Adapter bytecode, mapped by Adapter ID
+-
+ ### VaultCodeSet
+ 
+ ```solidity
+@@ -2027,57 +1518,10 @@ Emitted when the vault bytecode is set
+ | ---- | ---- | ----------- |
+ | creator | address | Address of creator |
+ 
+-### AdapterCreated
+-
+-```solidity
+-event AdapterCreated(uint256 id, uint256 adapterTypeId, address creator, address adapter)
+-```
+-
+-Emitted when an adapter is deployed
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| id | uint256 | ID of adapter |
+-| adapterTypeId | uint256 | Type ID of adapter |
+-| creator | address | Address of creator |
+-| adapter | address | Address of adapter |
+-
+-### AdapterTypeAdded
+-
+-```solidity
+-event AdapterTypeAdded(uint256 id, address creator)
+-```
+-
+-Emitted when a new adapter type is added
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| id | uint256 | ID of new adapter type |
+-| creator | address | Address of creator |
+-
+-### AdapterTypeRevoked
+-
+-```solidity
+-event AdapterTypeRevoked(uint256 id, address revoker)
+-```
+-
+-Emitted when an adapter type is revoked
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| id | uint256 | ID of revoked adapter type |
+-| revoker | address | Address of revoker |
+-
+ ### VaultCreated
+ 
+ ```solidity
+-event VaultCreated(uint256 vaultId, uint256 duration, uint256 fixedSideCapacity, uint256 fixedPremiumBps, uint256 earlyExitFeeBps, uint256 protocolFeeBps, address protocolFeeReceiver, address admin, address adapter, address creator, address vault)
++event VaultCreated(uint256 vaultId, uint256 duration, uint256 fixedSideCapacity, uint256 variableSideCapacity, uint256 earlyExitFeeBps, uint256 protocolFeeBps, address protocolFeeReceiver, address creator, address vault)
+ ```
+ 
+ Emitted when a new vault is deployed
+@@ -2089,213 +1533,86 @@ Emitted when a new vault is deployed
+ | vaultId | uint256 | ID of vault |
+ | duration | uint256 | How long the vault will be locked once started, in seconds |
+ | fixedSideCapacity | uint256 | Maximum capacity of fixed side |
+-| fixedPremiumBps | uint256 | Fixed depositor premium in basis points |
++| variableSideCapacity | uint256 | Maximum capacity of variable side |
+ | earlyExitFeeBps | uint256 | Fixed depositor early exit fee in basis points |
+ | protocolFeeBps | uint256 | Protocol fee in basis points |
+ | protocolFeeReceiver | address | Address that collects protocol fee |
+-| admin | address | Address of vault admin |
+-| adapter | address | Address of adapter |
+ | creator | address | Address of vault creator |
+ | vault | address | Address of vault |
+ 
+-### ProtocolFeeBpsSet
++### SetEarlyExitFeeBps
+ 
+ ```solidity
+-event ProtocolFeeBpsSet(uint256 protocolFeeBps, address setter)
++event SetEarlyExitFeeBps(uint256 earlyExitFeeBps)
+ ```
+ 
+-Emitted when the fee is updated
++Emitted when the Factory owner changes earlyExitFeeBps
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| protocolFeeBps | uint256 | New fee basis points |
+-| setter | address | Address of setter |
++| earlyExitFeeBps | uint256 | Fixed income early exit fee in basis points (one basis point = 1/100 of 1%) that is quadratically scaled based off of early exit time |
+ 
+-### ProtocolFeeReceiverSet
++### SetProtocolFeeReceiver
+ 
+ ```solidity
+-event ProtocolFeeReceiverSet(address protocolFeeReceiver, address setter)
++event SetProtocolFeeReceiver(address protocolFeeReceiver)
+ ```
+ 
+-Emitted when the fee receiver is updated
++Emitted when the Factory owner changes protocolFeeReceiver
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| protocolFeeReceiver | address | New fee receiver |
+-| setter | address | Address of setter |
+-
+-### FixedPremiumBpsSet
+-
+-```solidity
+-event FixedPremiumBpsSet(uint256 fixedPremiumBps, address setter)
+-```
+-
+-### EarlyExitFeeBpsSet
+-
+-```solidity
+-event EarlyExitFeeBpsSet(uint256 earlyExitFeeBps, address setter)
+-```
++| protocolFeeReceiver | address | Address that collects protocol fees |
+ 
+-### AdminSet
++### SetProtocolFeeBps
+ 
+ ```solidity
+-event AdminSet(address admin, address setter)
++event SetProtocolFeeBps(uint256 protocolFeeBps)
+ ```
+ 
+-Emitted when the admin is updated
++Emitted when the Factory owner changes protocolFeeBps
+ 
+ #### Parameters
+ 
+ | Name | Type | Description |
+ | ---- | ---- | ----------- |
+-| admin | address | New admin |
+-| setter | address | Address of setter |
++| protocolFeeBps | uint256 | Protocol fee taken from earnings in basis points |
+ 
+ ### constructor
+ 
+ ```solidity
+-constructor() public
+-```
+-
+-### renounceOwnership
+-
+-```solidity
+-function renounceOwnership() public
+-```
+-
+-Disable ownership renunciation
+-
+-### createVault
+-
+-```solidity
+-function createVault(address _adapterAddress, uint256 _fixedSideCapacity, uint256 _duration, uint256 _fixedPremiumBps) public virtual
+-```
+-
+-Deploys a new vault
+-
+-### createAdapter
+-
+-```solidity
+-function createAdapter(uint256 adapterTypeId, address vaultAddress) external
+-```
+-
+-Deploys a new adapter
+-
+-### addVault
+-
+-```solidity
+-function addVault(bytes bytecode) external
+-```
+-
+-Adds a the Lido vault bytecode
+-
+-### addAdapterType
+-
+-```solidity
+-function addAdapterType(bytes bytecode) external returns (uint256)
+-```
+-
+-Adds a new adapter bytecode, indexed by an auto-incremented adapter type ID
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| bytecode | bytes | Bytecode of new adapter type |
+-
+-#### Return Values
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| [0] | uint256 | New adapter type ID |
+-
+-### revokeAdapterType
+-
+-```solidity
+-function revokeAdapterType(uint256 id) external
++constructor(uint256 _protocolFeeBps, uint256 _earlyExitFeeBps) public
+ ```
+ 
+-Removes an adapter type, preventing new vault deployments from using this type
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| id | uint256 | ID of adapter type to revoke |
+-
+ ### setProtocolFeeBps
+ 
+ ```solidity
+ function setProtocolFeeBps(uint256 _protocolFeeBps) external
+ ```
+ 
+-Set protocol fee basis points
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _protocolFeeBps | uint256 | New basis points value to set as protocol fee |
+-
+ ### setProtocolFeeReceiver
+ 
+ ```solidity
+ function setProtocolFeeReceiver(address _protocolFeeReceiver) external
+ ```
+ 
+-Set new address to collect protocol fees
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _protocolFeeReceiver | address | New address to set as fee receiver |
+-
+-### setFixedPremiumBps
+-
+-```solidity
+-function setFixedPremiumBps(uint256 _fixedPremiumBps) external
+-```
+-
+-Set fixed premium basis points
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _fixedPremiumBps | uint256 | New fixed premium in basis points |
+-
+ ### setEarlyExitFeeBps
+ 
+ ```solidity
+ function setEarlyExitFeeBps(uint256 _earlyExitFeeBps) external
+ ```
+ 
+-Set fixed early exit fee basis points
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _earlyExitFeeBps | uint256 | New fixed early exit fee in basis points |
+-
+-### setAdmin
++### createVault
+ 
+ ```solidity
+-function setAdmin(address _admin) external
++function createVault(uint256 _fixedSideCapacity, uint256 _duration, uint256 _variableSideCapacity) public virtual
+ ```
+ 
+-Set new address to be admin on vault
+-
+-#### Parameters
+-
+-| Name | Type | Description |
+-| ---- | ---- | ----------- |
+-| _admin | address | New address to set as admin |
++Deploys a new vault
+ 
+ ### wasDeployedByFactory
+ 

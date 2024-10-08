@@ -918,6 +918,26 @@ A helper function to calculate the proportional amount of the reward due to the 
 | ---- | ---- | ----------- |
 | [0] | uint256 | amount The amount to give the user |
 
+### calculateVariableFeeEarningsShareWithUser
+
+```solidity
+function calculateVariableFeeEarningsShareWithUser(address user) internal returns (uint256)
+```
+
+A helper function to calculate the proportional amount of the reward due to the user that is passed in the variable
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| user | address | to whom the reward amount is due |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | amount The amount to give the user |
+
 ### calculateFixedEarlyExitFees
 
 ```solidity
