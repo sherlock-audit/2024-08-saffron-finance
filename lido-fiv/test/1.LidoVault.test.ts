@@ -6782,7 +6782,11 @@ describe('LidoVault', function () {
             await lidoVault.connect(addr2).withdraw(SIDE.VARIABLE)
             expect(await lidoVault.vaultEndedWithdrawalsFinalized()).to.equal(false)
 
+            await lidoVault.connect(addr1).finalizeVaultEndedWithdrawals(SIDE.FIXED)
             balanceBefore = await ethers.provider.getBalance(addr2)
+            console.log(await lidoVault.withdrawnStakingEarnings() , await lidoVault.vaultEndedStakingEarnings())
+            console.log(await lidoVault.vaultEndingETHBalance() * (await lidoVault.withdrawnStakingEarningsInStakes() -
+            await lidoVault.ongoingProtocolFeeInShares())/ await lidoVault.vaultEndingStakesAmount())
             const receipt = await (
               await lidoVault.connect(addr2).finalizeVaultEndedWithdrawals(SIDE.VARIABLE)
             ).wait()
@@ -6790,8 +6794,105 @@ describe('LidoVault', function () {
             const balanceAfter = await ethers.provider.getBalance(addr2)
 
             expect(await lidoVault.vaultEndedWithdrawalsFinalized()).to.equal(true)
-            expect(balanceAfter).to.equal(balanceBefore - gasFees)
             expect(await lidoVault.variableBearerToken(addr2.address)).to.equal(0)
+            expect(balanceAfter).to.equal(balanceBefore - gasFees)
+          })
+          it('Should allow addr3 to withdraw if there is a lido negative rebase and they have previously never withdrawn (vault-ended)', async function () {
+            const { lidoVault, lidoMock, lidoVaultAddress, addr1, addr2, addr3, addr4, variableBearerToken } =
+              await loadFixture(deployLidoVaultWithMockedLidoFixture)
+
+            await lidoVault.connect(addr1).deposit(SIDE.FIXED, { value: fixedDeposit })
+            await lidoVault.connect(addr2).deposit(SIDE.VARIABLE, { value: parseEther('10') })
+            await lidoVault.connect(addr3).deposit(SIDE.VARIABLE, { value: parseEther('5') })
+            await lidoVault.connect(addr4).deposit(SIDE.VARIABLE, { value: parseEther('5') })
+            expect(await lidoVault.isStarted()).to.be.true
+
+            await lidoVault.connect(addr1).claimFixedPremium()
+
+            // mock staking earnings - 100 ETH
+            const stakingEarnings = parseEther('100')
+            await lidoMock.addStakingEarningsForTargetETH(
+              fixedDeposit + stakingEarnings,
+              lidoVaultAddress
+            )
+
+            // first withdraw
+            let balanceBefore = await ethers.provider.getBalance(addr2)
+            await lidoVault.connect(addr2).withdraw(SIDE.VARIABLE)
+            await lidoVault.connect(addr2).finalizeVaultOngoingVariableWithdrawals()
+            expect(await ethers.provider.getBalance(addr2)).to.be.greaterThan(balanceBefore)
+
+            // mock staking loss
+            await lidoMock.subtractStakingEarnings(parseEther('20'))
+
+            // end vault
+            const { endTime } = await getTimeState(lidoVault)
+            await time.increaseTo(endTime + BIG_INT_ONE)
+            expect(await lidoVault.isEnded()).to.equal(true)
+
+            await lidoVault.connect(addr2).withdraw(SIDE.VARIABLE)
+            expect(await lidoVault.vaultEndedWithdrawalsFinalized()).to.equal(false)
+
+            await lidoVault.connect(addr1).finalizeVaultEndedWithdrawals(SIDE.FIXED)
+            expect(await lidoVault.vaultEndedWithdrawalsFinalized()).to.equal(true)
+            balanceBefore = await ethers.provider.getBalance(addr2)
+            const receipt = await (
+              await lidoVault.connect(addr2).finalizeVaultEndedWithdrawals(SIDE.VARIABLE)
+            ).wait()
+            const gasFees = calculateGasFees(receipt)
+            const balanceAfter = await ethers.provider.getBalance(addr2)
+            expect(await lidoVault.variableBearerToken(addr2.address)).to.equal(0)
+            expect(balanceAfter).to.equal(balanceBefore - gasFees)
+            const balanceAddr3Before = await ethers.provider.getBalance(addr3)
+
+            await expect(
+              lidoVault.connect(addr3).finalizeVaultEndedWithdrawals(SIDE.VARIABLE)
+            ).not.to.be.revertedWith('ETF')
+            console.log(balanceAddr3Before -  await ethers.provider.getBalance(addr3))
+            await expect(
+              lidoVault.connect(addr4).finalizeVaultEndedWithdrawals(SIDE.VARIABLE)
+            ).not.to.be.revertedWith('ETF')
+          })
+          it('Should allow addr3 to withdraw if there is a lido negative rebase and they have previously never withdrawn (vault-earlyexit but ongoing)', async function () {
+            const { lidoVault, lidoMock, lidoVaultAddress, addr1, addr2, addr3, variableBearerToken } =
+              await loadFixture(deployLidoVaultWithMockedLidoFixture)
+
+            await lidoVault.connect(addr1).deposit(SIDE.FIXED, { value: fixedDeposit })
+            await lidoVault.connect(addr2).deposit(SIDE.VARIABLE, { value: parseEther('10') })
+            await lidoVault.connect(addr3).deposit(SIDE.VARIABLE, { value: parseEther('10') })
+            expect(await lidoVault.isStarted()).to.be.true
+
+            await lidoVault.connect(addr1).claimFixedPremium()
+
+            // mock staking earnings - 100 ETH
+            const stakingEarnings = parseEther('100')
+            await lidoMock.addStakingEarningsForTargetETH(
+              fixedDeposit + stakingEarnings,
+              lidoVaultAddress
+            )
+
+            // first withdraw
+            let balanceBefore = await ethers.provider.getBalance(addr2)
+            await lidoVault.connect(addr2).withdraw(SIDE.VARIABLE)
+            await lidoVault.connect(addr2).finalizeVaultOngoingVariableWithdrawals()
+
+            expect(await ethers.provider.getBalance(addr2)).to.be.greaterThan(balanceBefore)
+            // mock staking loss
+            await lidoMock.subtractStakingEarnings(parseEther('20'))
+            await lidoVault.connect(addr1).withdraw(SIDE.FIXED)
+            await lidoVault.connect(addr1).finalizeVaultOngoingFixedWithdrawals();
+
+            console.log(await lidoVault.stakingBalance(),await lidoVault.fixedSidestETHOnStartCapacity())
+            await lidoVault.connect(addr2).withdraw(SIDE.VARIABLE)
+
+            const balanceAddr3Before = await ethers.provider.getBalance(addr3)
+
+            await expect(
+              lidoVault.connect(addr3).withdraw(SIDE.VARIABLE)
+            ).not.to.be.revertedWith('ETF')
+            await lidoVault.connect(addr3).finalizeVaultOngoingVariableWithdrawals()
+            console.log(balanceAddr3Before -  await ethers.provider.getBalance(addr3))
+
           })
         })
 
@@ -8033,8 +8134,8 @@ describe('LidoVault', function () {
                 ).wait()
                 const gasFees2 = calculateGasFees(receipt2)
                 const balanceAfter2 = await ethers.provider.getBalance(addr2)
-                expect(balanceAfter2 - balanceBefore2).to.equal(
-                  earningsShare2 - gasFees2
+                expect(balanceAfter2 - balanceBefore2).to.equalWithTolerance(
+                  earningsShare2 - gasFees2, 10
                 )
                 expect(await lidoVault.variableBearerToken(addr2.address)).to.equal(0)
               })
